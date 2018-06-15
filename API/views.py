@@ -20,15 +20,29 @@ def update_location_and_parameters(request):
         response_data = {}
         if post.get("key") == "70b66a89929e93416d2ef535893ea14da331da8991cc7c74010b4f3d7fabfd62":
             bus_number = post['bus_number']
+
+            # fetching bus object with busnumber
+            try:
+                bus = Bus.objects.get(bus_number=bus_number)
+            except Exception as e:
+                response_data['status'] = str(e)
+                print(e)
+                return
+
+
             time_recorded = datetime.strptime(post['time_recorded'], '%d/%m/%Y %H:%M:%S')
             if post['known_location'] == 'true':
                 place_name = post['place_name']
                 try:
-                    Location.objects.create(bus_number=bus_number,
+                    curr_bus_location = Location.objects.create(bus_number=bus_number,
                                             place_name=place_name,
                                             known_location=True,
                                             time_recorded=time_recorded,
                                             )
+
+                    # attaching new location with bus
+                    bus.location = curr_bus_location
+
                     response_data['status'] = 'Success'
                 except Exception as e:
                     response_data['status'] =  str(e)
@@ -55,7 +69,7 @@ def update_location_and_parameters(request):
                                                     distance=distance,
                                                     time_recorded=time_recorded
                                                     )
-                    bus = Bus.objects.get(bus_number=bus_number)
+                    # bus = Bus.objects.get(bus_number=bus_number)
                     bus.location = location
                     bus.parameters = Bp
                     bus.save()
