@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ObjectDoesNotExist
 
 from helper import speed
-from .models import Location, BusParameter
+from .models import Location, BusParameter, Bus
 
 
 @receiver(pre_save, sender=Location)
@@ -15,9 +15,18 @@ def new_location_being_saved(sender, instance, *args, **kwargs):
     coord = (latitude, longitude)
     time_recorded = instance.time_recorded
 
+
+    # get bus object by bus number
+    try:
+        bus = Bus.objects.get(bus_number=bus_number)
+    except ObjectDoesNotExist:
+        return
+
+
     # get previous latest location of this bus number
     try:
-        prev_location = Location.objects.filter(bus_number=bus_number).latest('time_recorded')
+        # prev_location = Location.objects.filter(bus_number=bus_number).latest('time_recorded')
+        prev_location = bus.location
     except ObjectDoesNotExist:
         return
     prev_latitude = prev_location.latitude
@@ -25,16 +34,20 @@ def new_location_being_saved(sender, instance, *args, **kwargs):
     prev_coord = (prev_latitude, prev_longitude)
     prev_time_recorded = prev_location.time_recorded
 
+
     # get busparam of this bus number
     try:
-        bus_param = BusParameter.objects.filter(bus_number=bus_number).latest('time_recorded')
+        # bus_param = BusParameter.objects.filter(bus_number=bus_number).latest('time_recorded')
+        bus_param = bus.parameters
     except ObjectDoesNotExist:
         return
+
 
     # calculate new distace and speed
     distance_traveled = speed.get_distance_in_km(prev_coord, coord)
     total_distance_traveled = distance_traveled + bus_param.distance
     new_speed = speed.get_speed_in_kmph(prev_coord, coord, prev_time_recorded, time_recorded)
+
 
     # hook it up with busparam
     bus_param.speed = new_speed
